@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.DS_Store
+
+# personal config/state - never commit tokens or your own client id
+config.json
+*.local.json
