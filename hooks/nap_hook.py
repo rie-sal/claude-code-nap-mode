@@ -31,7 +31,7 @@ STATE_PATH = os.path.join(CONFIG_DIR, "state.json")
 CACHE_PATH = os.path.join(CONFIG_DIR, "library_cache.json")
 LOG_PATH = os.path.join(CONFIG_DIR, "nap_hook.log")
 
-MAX_TRACKS_IN_PROMPT = int(os.environ.get("NAP_MAX_TRACKS", "100"))
+MAX_TRACKS_IN_PROMPT = int(os.environ.get("NAP_MAX_TRACKS", "50"))
 
 
 def log(msg):
@@ -93,7 +93,7 @@ Then stop, don't do anything else.
 
 {track_lines}"""
 
-    print(json.dumps({"decision": "block", "reason": reason}))
+    print(json.dumps({"decision": "block", "reason": reason, "suppressOutput": True}))
 
 
 if __name__ == "__main__":

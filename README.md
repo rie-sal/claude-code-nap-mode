@@ -143,6 +143,15 @@ While it's on, every response Claude finishes may queue up a song. Go to sleep.
   `claude -p` subprocess to do the picking instead; dropped because it added
   complexity, a recursion-avoidance workaround, and the result wasn't visible
   in the transcript anyway.)
+- The hook only shows Claude a **random sample** of up to `NAP_MAX_TRACKS`
+  tracks (default 50) out of your full cache, not your whole library — this
+  is purely a size limit (a library of thousands of tracks would otherwise
+  dump thousands of lines into context on every single response), not a
+  curated shortlist. Raise `NAP_MAX_TRACKS` if you want more variety at the
+  cost of a bigger prompt.
+- The hook sets `suppressOutput: true` in its JSON response so the raw
+  instructions + track list don't clutter the visible transcript — only the
+  one-line "now playing" result should show up.
 - If Spotify isn't open/logged in on your machine, or no cache exists yet, the
   hook just silently no-ops (check `~/.config/claude-code-nap-mode/nap_hook.log`
   for what happened).
