@@ -194,6 +194,24 @@ def _api(method, path, params=None, body=None):
 
 # ---------- Library cache (owned playlists only) ----------
 
+def _collect_playlist_tracks(pl, params, tracks):
+    while True:
+        page = _api("GET", f"/playlists/{pl['id']}/items", params=params)
+        for item in page["items"]:
+            t = item.get("item")
+            if not t or t.get("is_local") or not t.get("uri", "").startswith("spotify:track:"):
+                continue
+            tracks[t["uri"]] = {
+                "uri": t["uri"],
+                "name": t["name"],
+                "artist": ", ".join(a["name"] for a in t.get("artists", [])),
+                "playlist": pl["name"],
+            }
+        if not page.get("next"):
+            break
+        params["offset"] += params["limit"]
+
+
 def cmd_refresh_cache(args):
     me = _api("GET", "/me")
     my_id = me["id"]
@@ -211,24 +229,18 @@ def cmd_refresh_cache(args):
     print(f"Found {len(owned)} playlists owned by you (of {len(playlists)} total).")
 
     tracks = {}
+    skipped = []
     for pl in owned:
         params = {"limit": 100, "offset": 0,
-                   "fields": "items(track(uri,name,artists(name),is_local)),next"}
-        while True:
-            page = _api("GET", f"/playlists/{pl['id']}/tracks", params=params)
-            for item in page["items"]:
-                t = item.get("track")
-                if not t or t.get("is_local") or not t.get("uri", "").startswith("spotify:track:"):
-                    continue
-                tracks[t["uri"]] = {
-                    "uri": t["uri"],
-                    "name": t["name"],
-                    "artist": ", ".join(a["name"] for a in t.get("artists", [])),
-                    "playlist": pl["name"],
-                }
-            if not page.get("next"):
-                break
-            params["offset"] += params["limit"]
+                   "fields": "items(item(uri,name,artists(name),is_local)),next"}
+        try:
+            _collect_playlist_tracks(pl, params, tracks)
+        except RuntimeError as e:
+            skipped.append(pl["name"])
+            print(f"  skipping '{pl['name']}' ({e})")
+
+    if skipped:
+        print(f"Skipped {len(skipped)} playlist(s) Spotify wouldn't let us read: {', '.join(skipped)}")
 
     cache = {"updated_at": time.time(), "tracks": list(tracks.values())}
     _save_json(CACHE_PATH, cache)
@@ -314,4 +326,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except BrokenPipeError:
+        os.dup2(os.open(os.devnull, os.O_WRONLY), sys.stdout.fileno())
+        sys.exit(1)

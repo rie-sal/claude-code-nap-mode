@@ -8,8 +8,11 @@ cached Spotify library that matches the mood of what was just done, then
 plays it via nap.py.
 
 Register this as a Stop hook in ~/.claude/settings.json (see README.md).
-Runs `claude --bare -p ...` for the mood judgment so it never fires this
-same hook again (--bare skips hook loading), which avoids recursion.
+Runs `claude -p ...` for the mood judgment. NAP_HOOK_ACTIVE=1 is set on that
+subprocess's environment and checked at the top of this file, so if the
+headless call's own Stop hook fires this script again, it no-ops immediately
+instead of recursing. (--bare would also skip hook loading, but it turns out
+to skip loading stored credentials too, breaking auth, so it's not used here.)
 """
 import json
 import os
@@ -102,7 +105,7 @@ Reply with ONLY the Spotify track URI on a single line. No other text.
         env = dict(os.environ)
         env["NAP_HOOK_ACTIVE"] = "1"
         result = subprocess.run(
-            ["claude", "--bare", "-p", prompt, "--output-format", "text"],
+            ["claude", "-p", prompt, "--output-format", "text"],
             capture_output=True, text=True, timeout=60, env=env,
         )
         output = result.stdout.strip()

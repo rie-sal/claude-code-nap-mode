@@ -131,10 +131,13 @@ While it's on, every response Claude finishes may queue up a song. Go to sleep.
 - Only considers playlists **you own**, not ones you follow — this was a
   deliberate choice, edit the `owner.id == my_id` filter in `nap.py` if you
   want to include followed playlists too.
-- The mood judgment costs one small extra headless Claude call per response
-  while nap mode is on. It runs with `claude --bare`, which skips loading
-  hooks/project context for that sub-call, both to keep it cheap and to avoid
-  the hook recursively triggering itself.
+- The mood judgment costs one small extra headless Claude call
+  (`claude -p ...`) per response while nap mode is on. That subprocess is
+  launched with `NAP_HOOK_ACTIVE=1` set in its environment, which the hook
+  checks and no-ops on immediately — so if the headless call's own Stop hook
+  fires, it doesn't recurse. (An earlier version used `claude --bare` to skip
+  hook loading entirely, but `--bare` also skips loading stored credentials
+  and broke auth — dropped in favor of the env-var guard.)
 - If Spotify isn't open/logged in on your machine, or no cache exists yet, the
   hook just silently no-ops (check `~/.config/claude-code-nap-mode/nap_hook.log`
   for what happened).
