@@ -1,7 +1,11 @@
-# spotify-nap-mode
+# claude-code-nap-mode
 
-Go to sleep while Claude Code works. Wake up to a song Claude picked for you,
-based on the vibe of what it just did.
+Go to sleep while [Claude Code](https://claude.com/claude-code) works. Wake up
+to a song Claude picked for you, based on the vibe of what it just did.
+
+> Unofficial community project — not affiliated with, endorsed by, or
+> supported by Anthropic or Spotify. "Claude Code" and "Spotify" are
+> trademarks of their respective owners.
 
 How it works:
 
@@ -38,15 +42,15 @@ cp config.example.json config.json
 ```
 
 This `config.json` is only a *template location* — actual runtime config
-lives outside the repo, in `~/.config/spotify-nap-mode/`, so there's nothing
+lives outside the repo, in `~/.config/claude-code-nap-mode/`, so there's nothing
 personal to accidentally commit. Instead, run:
 
 ```bash
-mkdir -p ~/.config/spotify-nap-mode
-cp config.example.json ~/.config/spotify-nap-mode/config.json
+mkdir -p ~/.config/claude-code-nap-mode
+cp config.example.json ~/.config/claude-code-nap-mode/config.json
 ```
 
-Edit `~/.config/spotify-nap-mode/config.json` and paste in your Client ID.
+Edit `~/.config/claude-code-nap-mode/config.json` and paste in your Client ID.
 
 ### 3. Log in once
 
@@ -82,7 +86,7 @@ there — don't overwrite the file):
         "hooks": [
           {
             "type": "command",
-            "command": "python3 /absolute/path/to/spotify-nap-mode/hooks/nap_hook.py"
+            "command": "python3 /absolute/path/to/claude-code-nap-mode/hooks/nap_hook.py"
           }
         ]
       }
@@ -91,16 +95,31 @@ there — don't overwrite the file):
 }
 ```
 
-Replace `/absolute/path/to/spotify-nap-mode` with wherever you cloned this
+Replace `/absolute/path/to/claude-code-nap-mode` with wherever you cloned this
 repo. This hook is a no-op (exits instantly) whenever nap mode is off, so it's
 safe to leave registered permanently.
 
-### 6. Use it
+### 6. Install the slash command
 
-In any Claude Code chat:
+```bash
+mkdir -p ~/.claude/commands
+cp commands/nap-mode.md ~/.claude/commands/nap-mode.md
+```
 
-- "turn nap mode on" → Claude runs `python3 nap.py on`
-- "turn nap mode off" → Claude runs `python3 nap.py off`
+This makes `/nap-mode` available in every Claude Code project. If you cloned
+this repo somewhere other than `~/claude-code-nap-mode`, edit the path inside
+`~/.claude/commands/nap-mode.md` to match.
+
+### 7. Use it
+
+```
+/nap-mode on
+/nap-mode off
+/nap-mode status
+```
+
+Or just ask in chat — "turn nap mode on" works too, Claude will run the same
+`nap.py on` / `nap.py off` underneath.
 
 While it's on, every response Claude finishes may queue up a song. Go to sleep.
 
@@ -117,13 +136,14 @@ While it's on, every response Claude finishes may queue up a song. Go to sleep.
   hooks/project context for that sub-call, both to keep it cheap and to avoid
   the hook recursively triggering itself.
 - If Spotify isn't open/logged in on your machine, or no cache exists yet, the
-  hook just silently no-ops (check `~/.config/spotify-nap-mode/nap_hook.log`
+  hook just silently no-ops (check `~/.config/claude-code-nap-mode/nap_hook.log`
   for what happened).
-- Tokens and your cached library live in `~/.config/spotify-nap-mode/`, never
+- Tokens and your cached library live in `~/.config/claude-code-nap-mode/`, never
   inside the repo — safe to `git clone` this publicly and it stays that way.
 
 ## Files
 
 - `nap.py` — CLI: `auth`, `refresh-cache`, `list`, `play <uri>`, `on`, `off`, `status`
 - `hooks/nap_hook.py` — the Stop hook that does the mood-picking + playback
+- `commands/nap-mode.md` — the `/nap-mode` slash command definition
 - `config.example.json` — template for your local (gitignored) config

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Claude Code "Stop" hook for spotify-nap-mode.
+Claude Code "Stop" hook for claude-code-nap-mode.
 
 Fires after every response Claude gives. If nap mode is on, it asks a
 throwaway headless Claude instance to pick one song (by vibes) from your
@@ -23,7 +23,7 @@ NAP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 NAP_PY = os.path.join(NAP_DIR, "nap.py")
 
 CONFIG_DIR = os.path.expanduser(
-    os.environ.get("NAP_MODE_CONFIG_DIR", "~/.config/spotify-nap-mode")
+    os.environ.get("NAP_MODE_CONFIG_DIR", "~/.config/claude-code-nap-mode")
 )
 STATE_PATH = os.path.join(CONFIG_DIR, "state.json")
 CACHE_PATH = os.path.join(CONFIG_DIR, "library_cache.json")

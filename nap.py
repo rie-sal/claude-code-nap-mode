@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-spotify-nap-mode: pick a song from your own Spotify playlists and play it,
+claude-code-nap-mode: pick a song from your own Spotify playlists and play it,
 driven by whatever's calling this (e.g. an AI agent choosing by "vibes").
 
 Stdlib only, no third-party deps. macOS-first (uses `open -a Spotify` to
 wake a local Spotify Connect device), but the Web API calls are portable.
 
-Config / state lives in ~/.config/spotify-nap-mode/ (XDG-ish), separate from
+Config / state lives in ~/.config/claude-code-nap-mode/ (XDG-ish), separate from
 wherever this repo is cloned, so multiple checkouts / machines share nothing
 by accident and nothing mutable ends up inside the git working tree.
 """
@@ -25,7 +25,7 @@ import urllib.request
 import webbrowser
 
 CONFIG_DIR = os.path.expanduser(
-    os.environ.get("NAP_MODE_CONFIG_DIR", "~/.config/spotify-nap-mode")
+    os.environ.get("NAP_MODE_CONFIG_DIR", "~/.config/claude-code-nap-mode")
 )
 CONFIG_PATH = os.path.join(CONFIG_DIR, "config.json")
 TOKEN_PATH = os.path.join(CONFIG_DIR, "token.json")
