@@ -53,6 +53,15 @@ def load_json(path, default=None):
         return default
 
 
+def save_json(path, data):
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w") as f:
+            json.dump(data, f, indent=2)
+    except Exception:
+        pass
+
+
 def main():
     # Belt-and-suspenders: if we're somehow already inside a nap-hook-spawned
     # invocation, bail immediately instead of risking recursion.
@@ -97,7 +106,9 @@ Pick exactly ONE song from the list below that matches the mood/energy of that w
 routine cleanup might call for something chill; a big shipped feature might call for
 something upbeat). Use vibes, not genre rules.
 
-Reply with ONLY the Spotify track URI on a single line. No other text.
+Reply with EXACTLY two lines and nothing else:
+line 1: the Spotify track URI
+line 2: one sentence on why it fits the vibe of what just happened
 
 {track_lines}"""
 
@@ -119,9 +130,18 @@ Reply with ONLY the Spotify track URI on a single line. No other text.
         return
 
     uri = match.group(0)
+    justification = output.replace(uri, "", 1).strip().lstrip("-:").strip()
+    if not justification:
+        justification = "(no justification given)"
+
     track = next((t for t in cache["tracks"] if t["uri"] == uri), None)
     label = f"{track['artist']} - {track['name']}" if track else uri
-    log(f"picked: {label}")
+    log(f"picked: {label} — {justification}")
+
+    save_json(os.path.join(CONFIG_DIR, "last_pick.json"), {
+        "uri": uri, "label": label, "justification": justification,
+        "at": time.time(),
+    })
 
     try:
         subprocess.run(
