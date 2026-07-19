@@ -12,13 +12,14 @@ How it works:
 1. You turn "nap mode" on (just tell Claude in chat, e.g. "turn nap mode on").
 2. From then on, every time Claude finishes a response, a
    [Stop hook](hooks/nap_hook.py) fires.
-3. If nap mode is on, the hook spins up a tiny throwaway headless Claude call,
-   hands it a list of songs pulled from **your own Spotify playlists**, and
-   asks it to pick one track that matches the mood/energy of what was just
-   done — a hairy bug fix might get something tense-then-triumphant, routine
-   cleanup might get something chill, shipping a feature might get something
-   upbeat.
-4. That track gets played on your computer via Spotify Connect.
+3. If nap mode is on, the hook doesn't pick the song itself — it blocks the
+   stop and hands Claude a list of tracks from **your own Spotify playlists**
+   plus instructions: pick one that matches the mood/energy of what was just
+   done (a hairy bug fix resolved might get something tense-then-triumphant,
+   routine cleanup might get something chill, shipping a feature might get
+   something upbeat), play it, and say why in one line.
+4. Claude runs the play command and tells you the pick + reasoning as a real
+   part of its response — you see it in the transcript, not just hear it.
 
 Nothing here is specific to one person's account — this repo only ever reads
 your *own* playlists and plays to *your* own Spotify, using your own API
@@ -131,13 +132,17 @@ While it's on, every response Claude finishes may queue up a song. Go to sleep.
 - Only considers playlists **you own**, not ones you follow — this was a
   deliberate choice, edit the `owner.id == my_id` filter in `nap.py` if you
   want to include followed playlists too.
-- The mood judgment costs one small extra headless Claude call
-  (`claude -p ...`) per response while nap mode is on. That subprocess is
-  launched with `NAP_HOOK_ACTIVE=1` set in its environment, which the hook
-  checks and no-ops on immediately — so if the headless call's own Stop hook
-  fires, it doesn't recurse. (An earlier version used `claude --bare` to skip
-  hook loading entirely, but `--bare` also skips loading stored credentials
-  and broke auth — dropped in favor of the env-var guard.)
+- The hook works by returning `{"decision": "block", "reason": "..."}`, which
+  forces Claude to keep going with that reason as instructions — that's what
+  makes the pick + justification show up as a real, visible continuation of
+  the conversation, using Claude's actual context of the task (not a
+  re-summarized message handed to an isolated subprocess). To avoid an
+  infinite loop, the hook checks `stop_hook_active` in its input and does
+  nothing if that continuation is itself what's ending — so it fires once per
+  real response, not forever. (An earlier version spawned a throwaway
+  `claude -p` subprocess to do the picking instead; dropped because it added
+  complexity, a recursion-avoidance workaround, and the result wasn't visible
+  in the transcript anyway.)
 - If Spotify isn't open/logged in on your machine, or no cache exists yet, the
   hook just silently no-ops (check `~/.config/claude-code-nap-mode/nap_hook.log`
   for what happened).
@@ -147,6 +152,6 @@ While it's on, every response Claude finishes may queue up a song. Go to sleep.
 ## Files
 
 - `nap.py` — CLI: `auth`, `refresh-cache`, `list`, `play <uri>`, `on`, `off`, `status`
-- `hooks/nap_hook.py` — the Stop hook that does the mood-picking + playback
+- `hooks/nap_hook.py` — the Stop hook that hands Claude the track list + instructions
 - `commands/nap-mode.md` — the `/nap-mode` slash command definition
 - `config.example.json` — template for your local (gitignored) config
