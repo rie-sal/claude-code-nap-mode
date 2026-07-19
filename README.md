@@ -16,12 +16,13 @@ How it works:
    gated on `auto` deliberately — nap mode means you're away from the
    keyboard, so it only makes sense while Claude is actually running
    autonomously rather than sitting on a permission prompt waiting for you.)
-3. The hook asks a throwaway headless Claude call to pick one track — by
-   number, from a sampled list of your **own Spotify playlists** — that
-   matches the mood/energy of what was just done (a hairy bug fix resolved
-   might get something tense-then-triumphant, routine cleanup might get
-   something chill, shipping a feature might get something upbeat), plus a
-   one-sentence justification.
+3. The hook picks a track in two small hidden headless Claude calls: first it
+   picks which of your **own Spotify playlists** best matches the vibe of what
+   was just done (your playlist names are themselves genre/mood buckets —
+   e.g. "berlin-derived hypnodub techno" — richer signal than Spotify's own
+   audio-features, which aren't usable here: Spotify killed that endpoint for
+   any app not grandfathered in before Nov 2024, no exceptions), then picks a
+   specific track from just that playlist, plus a one-sentence justification.
 4. The hook plays the track itself via the Spotify Web API, then surfaces a
    clean one-line "now playing: X — reason" message to you through the hook's
    `systemMessage` field — visible in the transcript, without dumping the raw
@@ -141,28 +142,31 @@ While it's on, every response Claude finishes may queue up a song. Go to sleep.
 - Only fires while the session's `permission_mode` is `auto` (checked from the
   hook's stdin payload) — nap mode assumes nobody's around to answer a
   permission prompt, so it stays quiet in every other mode.
-- The picking happens via a throwaway headless `claude -p` subprocess, kept
-  invisible to your terminal — the raw prompt (instructions + track list)
-  never gets printed to your transcript, only the final one-line
-  `systemMessage` does. That subprocess is itself a Claude Code invocation
-  and would otherwise trigger this same Stop hook recursively when it
-  finishes; `NAP_HOOK_ACTIVE=1` is set on its environment and checked at the
-  top of the script to short-circuit that.
-- The prompt shows the model a **numbered index per track instead of the full
-  Spotify URI** (~36 chars of pure overhead with zero vibe signal) — the
-  model answers with a number, which gets mapped back to a URI locally. Cuts
-  roughly a third of the track-list tokens with no loss in how many tracks
-  get considered.
-- The hook only shows Claude a **random sample** of up to `NAP_MAX_TRACKS`
-  tracks (default 150) out of your full cache, not your whole library — this
-  is purely a size limit (a library of thousands of tracks would otherwise
-  blow up the prompt on every single response), not a curated shortlist.
-  Raise `NAP_MAX_TRACKS` if you want more variety at the cost of a bigger
-  prompt.
-- The parser takes the **last** standalone-number line in the model's output,
-  not the first — small local models occasionally second-guess themselves
-  mid-answer ("2... wait, let me reconsider... 19"), and the last number is
-  reliably the actual final answer.
+- Both picking calls happen via throwaway headless `claude -p` subprocesses,
+  kept invisible to your terminal — the raw prompts (instructions + playlist
+  or track list) never get printed to your transcript, only the final
+  one-line `systemMessage` does. Each subprocess is itself a Claude Code
+  invocation and would otherwise trigger this same Stop hook recursively when
+  it finishes; `NAP_HOOK_ACTIVE=1` is set on its environment and checked at
+  the top of the script to short-circuit that.
+- Both prompts show the model a **numbered index per item instead of a full
+  Spotify URI** (~36 chars of pure overhead with zero vibe signal) — cuts a
+  meaningful chunk of tokens with no loss in coverage. This two-stage
+  playlist-then-track design also means the *whole* library is considered
+  (every playlist is a stage-1 candidate) rather than a random flat sample of
+  a few hundred tracks, while keeping each individual prompt small (a
+  playlist's own track list is usually far smaller than the whole cache).
+  `NAP_MAX_TRACKS_PER_PLAYLIST` (default 300) is just a safety cap for an
+  unusually huge playlist.
+- The parser takes the **last** number+text line in the model's output, not
+  the first — models occasionally second-guess themselves mid-answer ("2...
+  wait, let me reconsider... 19"). It also **self-corrects**: models are much
+  better at recalling a track's actual name than at accurately counting its
+  position in a numbered list, so the model is asked to restate the item's
+  text next to its number, and if that text doesn't match the label at the
+  claimed index, the text wins and the parser looks up the real index —
+  caught a real case where the model named one song but reported another
+  song's number.
 - If Spotify isn't open/logged in on your machine, or no cache exists yet, the
   hook just silently no-ops (check `~/.config/claude-code-nap-mode/nap_hook.log`
   for what happened).
